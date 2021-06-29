@@ -1,24 +1,44 @@
 {
-  "name": "techdegree-fullstackjs-rest-api",
-  "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
+  "name": "fs-javascript---project-nine---rest-api",
+  "version": "0.0.0",
+  "private": true,
   "scripts": {
-    "start": "nodemon ./app.js",
+    "start": "nodemon ./bin/www",
     "seed": "cross-env DB_ENABLE_LOGGING=true node './seed'"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "nodemon": "^1.18.3"
+    "nodemon": "^2.0.7",
+    "sequelize-cli": "^6.2.0"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "cross-env": "^7.0.2",
-    "express": "^4.17.1",
-    "morgan": "^1.10.0",
+    "chalk": "^3.0.0",
+    "cookie-parser": "~1.4.4",
+    "cross-env": "^7.0.3",
+    "debug": "~2.6.9",
+    "express": "~4.16.1",
+    "http-errors": "~1.6.3",
+    "morgan": "~1.9.1",
     "promise.prototype.finally": "^3.1.2",
-    "sqlite3": "^5.0.0"
+    "pug": "^3.0.2",
+    "sequelize": "^6.6.4",
+    "sqlite3": "^5.0.2"
+  },
+  "nodemonConfig": {
+    "restartable": "rs",
+    "ignore": [
+      ".git",
+      "./node_modules/**"
+    ],
+    "verbose": true,
+    "env": {
+      "NODE_ENV": "development",
+      "DB_ENABLE_LOGGING": "false",
+      "ENABLE_GLOBAL_ERROR_LOGGING": "false"
+    },
+    "ext": "js"
   }
 }
