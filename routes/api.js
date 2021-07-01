@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const bcrypt = require('bcrypt');
+const auth = require('basic-auth');
 
 const User = require('../models').User;
 const Course = require('../models').Course;
@@ -25,6 +26,39 @@ function asyncHandler(cb){
   }
 }
 
+/* Handler function to authenticate user */
+async function authenticateUser(req, res, next) {
+  // Parse the user's credentials from the Authorization header.
+  const credentials = auth(req);
+
+  // If the user's credentials are available...
+  if (credentials) {
+    const user = await User.findOne({ where: {username: credentials.name} });
+    if (user) {
+      const authenticated = bcrypt.compareSync(credentials.pass, user.confirmedPassword);
+      if (authenticated) {
+        console.log(`Authentication successful for username: ${user.username}`);
+        // Store the user on the Request object.
+        req.currentUser = user;
+      } else {
+        message = `Authentication failure for username: ${user.username}`;
+      }
+    } else {
+      message = `User not found for username: ${credentials.name}`;
+    }
+  } else {
+    message = 'Auth header not found';
+  }
+  if (message) {
+    console.warn(message);
+    res.status(401).json({ message: 'Access Denied' });
+  } else {
+    next();
+  }
+  }
+
+
+
 /* Handler function to deal with sequelize errors */
 // function sequelizeErr(error, cb) {
 //   try {
@@ -48,11 +82,12 @@ router.get('/', function(req, res, next) {
 });
 
 /* GET current user */
-router.get('/users', asyncHandler(async (req, res, next) => {
-  const user = await User.findByPk(req.params.id);
-  user
-  ? res.status(200).json({ user })
-  : res.status(404).json({ error: "No such user exists" });
+router.get('/users', authenticateUser, asyncHandler(async (req, res, next) => {
+  const user = await User.findByPk(req.currentUser);
+  res.status(200).json({
+    name: `${user.firstName} ${user.lastName}`,
+    email: user.emailAddress
+  });
 }));
 
 /* POST add new user */
@@ -76,13 +111,13 @@ router.get('/courses:id', asyncHandler(async (req, res, next) => {
 }));
 
 /* POST create a new course */
-router.post('/courses:id', asyncHandler(async (req, res, next) => {
+router.post('/courses:id', authenticateUser, asyncHandler(async (req, res, next) => {
   let course = await Course.create(req.body);
   res.status(201);
 }));
 
 /* PUT update course */
-router.put('/courses:id', asyncHandler(async (req, res, next) => {
+router.put('/courses:id', authenticateUser, asyncHandler(async (req, res, next) => {
   let course = await Course.findByPk(req.params.id);
   if (course) {
     await course.update(req.body);
@@ -91,7 +126,7 @@ router.put('/courses:id', asyncHandler(async (req, res, next) => {
 }));
 
 /* DELETE delete course */
-router.delete('/courses:id', asyncHandler(async (req, res, next) => {
+router.delete('/courses:id', authenticateUser, asyncHandler(async (req, res, next) => {
   const course = await Course.findByPk(req.params.id);
   if(course) {
     await book.destroy();
