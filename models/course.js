@@ -13,18 +13,18 @@ module.exports = (sequelize) => {
     },
     title: {
       type: Sequelize.STRING,
+      allowNull: false,
       validate: {
-        notEmpty: {
-          msg: 'A course title is required'
-        }
+        notNull: { msg: 'A course title is required' },
+        notEmpty: { msg: 'A course title is required' }
       }
     },
     description: {
+      allowNull: false,
       type: Sequelize.TEXT,
       validate: {
-        notEmpty: {
-          msg: 'A course description is required'
-        },
+        notNull: { msg: 'A course description is required' },
+        notEmpty: { msg: 'A course description is required' },
         len: {
           arg: [20, 2000],
           msg: '"Course Description" should be between 20 and 2000 characters long '
@@ -37,13 +37,7 @@ module.exports = (sequelize) => {
   }, { sequelize });
 
   Course.associate = (models) => {
-    Course.belongsTo(models.User, {
-      as: 'user', // alias
-      foreignKey: {
-        fieldName: 'userId',
-        allowNull: false,
-      },
-    });
+    Course.User = Course.belongsTo(models.User);
   };
 
   return Course;

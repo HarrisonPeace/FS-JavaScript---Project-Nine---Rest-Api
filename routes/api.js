@@ -1,78 +1,11 @@
-var express = require('express');
-var router = express.Router();
+let express = require('express');
+let router = express.Router();
 const bcrypt = require('bcrypt');
 const auth = require('basic-auth');
 
+const {authenticateUser, asyncHandler} = require('./helpers');
 const User = require('../models').User;
 const Course = require('../models').Course;
-
-// variable to enable global error logging
-const enableGlobalErrorLogging = process.env.ENABLE_GLOBAL_ERROR_LOGGING === 'true';
-
-/* Handler function to wrap each route. */
-function asyncHandler(cb){
-  return async(req, res, next) => {
-    try {
-      await cb(req, res, next)
-    } catch (error) {
-      if(error.name === "SequelizeValidationError" || error.name === "SequelizeUniqueConstraintError") { // checking the error
-        const errors = error.errors.map(err => err.message);
-        user = await User.build(req.body);
-        res.status(400).json({ user, errors})
-      } else {
-        next(error); // Forward error to the global error handler
-      }
-    }
-  }
-}
-
-/* Handler function to authenticate user */
-async function authenticateUser(req, res, next) {
-  // Parse the user's credentials from the Authorization header.
-  const credentials = auth(req);
-
-  // If the user's credentials are available...
-  if (credentials) {
-    const user = await User.findOne({ where: {username: credentials.name} });
-    if (user) {
-      const authenticated = bcrypt.compareSync(credentials.pass, user.confirmedPassword);
-      if (authenticated) {
-        console.log(`Authentication successful for username: ${user.username}`);
-        // Store the user on the Request object.
-        req.currentUser = user;
-      } else {
-        message = `Authentication failure for username: ${user.username}`;
-      }
-    } else {
-      message = `User not found for username: ${credentials.name}`;
-    }
-  } else {
-    message = 'Auth header not found';
-  }
-  if (message) {
-    console.warn(message);
-    res.status(401).json({ message: 'Access Denied' });
-  } else {
-    next();
-  }
-  }
-
-
-
-/* Handler function to deal with sequelize errors */
-// function sequelizeErr(error, cb) {
-//   try {
-//     await cb(req, res, next)
-//   } catch (error) {
-//     if(error.name === "SequelizeValidationError" || error.name === "SequelizeUniqueConstraintError") { // checking the error
-//       const errors = error.errors.map(err => err.message);
-//       user = await User.build(req.body);
-//       res.status(400).json({ user, errors})
-//     } else {
-//       throw error; // error caught in the asyncHandler's catch block
-//     }
-//   }
-// }
 
 /* GET show API instructions. */
 router.get('/', function(req, res, next) {
@@ -84,6 +17,7 @@ router.get('/', function(req, res, next) {
 /* GET current user */
 router.get('/users', authenticateUser, asyncHandler(async (req, res, next) => {
   const user = await User.findByPk(req.currentUser);
+  console.log(user);
   res.status(200).json({
     name: `${user.firstName} ${user.lastName}`,
     email: user.emailAddress
@@ -93,60 +27,79 @@ router.get('/users', authenticateUser, asyncHandler(async (req, res, next) => {
 /* POST add new user */
 router.post('/users', asyncHandler(async (req, res, next) => {
   let user = await User.create(req.body);
-  res.status(201);
+  res.status(201).end();
 }));
 
 /* GET all courses and associated user */
 router.get('/courses', asyncHandler(async (req, res, next) => {
-  const courses = await Course.findAll({ order: [[ "title", "DESC" ]] });
+  const coursesInfo = await Course.findAll({
+    include: [{ model: User }], 
+    order: [[ "title", "DESC" ]] 
+  });
+  let courses = coursesInfo.map(course => {
+    return {
+      title: course.title,
+      description: course.description,
+      estimatedTime: course.estimatedTime,
+      materialsNeeded: course.materialsNeeded,
+      user: `${course.User.dataValues.firstName} ${course.User.dataValues.lastName}`,
+      userEmailAddress: course.User.dataValues.emailAddress
+    }
+  })
   res.status(200).json({ courses });
 }));
 
 /* GET specific course and associated user */
-router.get('/courses:id', asyncHandler(async (req, res, next) => {
-  const course = await Course.findByPk(req.params.id);
+router.get('/courses/:id', asyncHandler(async (req, res, next) => {
+  const course = await Course.findByPk(req.params.id, {
+    include: [{ model: User }]
+  });
   course
-  ? res.status(200).json({ course })
+  ? res.status(200).json({ 
+    title: course.title,
+    description: course.description,
+    estimatedTime: course.estimatedTime,
+    materialsNeeded: course.materialsNeeded,
+    user: `${course.User.dataValues.firstName} ${course.User.dataValues.lastName}`,
+    userEmailAddress: course.User.dataValues.emailAddress
+  })
   : res.status(404).json({ error: "No such course exists" });
 }));
 
 /* POST create a new course */
-router.post('/courses:id', authenticateUser, asyncHandler(async (req, res, next) => {
+router.post('/courses', authenticateUser, asyncHandler(async (req, res, next) => {
   let course = await Course.create(req.body);
-  res.status(201);
+  res.status(201).end();
 }));
 
 /* PUT update course */
-router.put('/courses:id', authenticateUser, asyncHandler(async (req, res, next) => {
-  let course = await Course.findByPk(req.params.id);
+router.put('/courses/:id', authenticateUser, asyncHandler(async (req, res, next) => {
+  let course = await Course.findByPk(req.params.id, {
+    include: [{ model: User }]
+  });
   if (course) {
-    await course.update(req.body);
-    res.status(201);
+    if (course.User.dataValues.id === req.currentUser) {
+      await course.update(req.body);
+      res.status(204).end();
+c
+    } else res.status(403).json({ message: `You don't have permission to update this course` });
+
   } else res.status(404).json({ error: "No such course exists" });
 }));
 
 /* DELETE delete course */
-router.delete('/courses:id', authenticateUser, asyncHandler(async (req, res, next) => {
-  const course = await Course.findByPk(req.params.id);
-  if(course) {
-    await book.destroy();
-    res.status(204)
-  } else {
-    res.status(404).json({ error: "No such course exists" });
-  }
-}));
-
-//NOT YET WORKING ****************************************************************************************
-// setup a global error handler
-router.use((err, req, res, next) => {
-  if (enableGlobalErrorLogging) {
-    console.error(`Global error handler: ${JSON.stringify(err.stack)}`);
-  }
-
-  res.status(err.status || 500).json({
-    message: err.message,
-    error: {},
+router.delete('/courses/:id', authenticateUser, asyncHandler(async (req, res, next) => {
+  const course = await Course.findByPk(req.params.id, {
+    include: [{ model: User }]
   });
-});
+  if(course) {
+    if (course.User.dataValues.id === req.currentUser) {
+      await course.destroy();
+      res.status(204).end();
+
+    } else res.status(403).json({ message: `You don't have permission to delete this course` });
+
+  } else res.status(404).json({ error: "No such course exists" });
+}));
 
 module.exports = router;

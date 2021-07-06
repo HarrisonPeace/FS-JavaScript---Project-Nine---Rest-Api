@@ -9,38 +9,36 @@ module.exports = (sequelize) => {
   User.init({
     firstName: {
       type: DataTypes.STRING,
+      allowNull: false,
       validate: {
-        notEmpty: {
-          msg: 'A first name is required'
-        }
+        notNull: { msg: 'A first name is required' },
+        notEmpty: { msg: 'A first name is required' }
       }
     },
     lastName: {
       type: DataTypes.STRING,
+      allowNull: false,
       validate: {
-        notEmpty: {
-          msg: 'A last name is required'
-        }
+        notNull: { msg: 'A last name is required' },
+        notEmpty: { msg: 'A last name is required' }
       },
     },
     emailAddress: {
+      allowNull: false,
       type: DataTypes.STRING,
-      unique: true,
+      unique: { msg: `'User is already found in the system'` },
       validate: {
-        notEmpty: {
-          msg: 'A email is required'
-        },
-        isEmail: {
-          msg: 'Please enter a valid email'
-        }
+        notNull: { msg: 'An email is required' },
+        notEmpty: { msg: 'An email is required' },
+        isEmail: { msg: 'Please enter a valid email' }
       },
     },
     password: {
       type: DataTypes.STRING,
+      allowNull: false,
       validate: {
-        notEmpty: {
-          msg: 'A password is required'
-        },
+        notNull: { msg: 'A password is required' },
+        notEmpty: { msg: 'A password is required' },
         len: {
           arg: [6, 20],
           msg: 'Password must be between 6 and 20 characters'
@@ -69,13 +67,7 @@ module.exports = (sequelize) => {
   }, { sequelize });
 
   User.associate = (models) => {
-    User.hasMany(models.Course, {
-      as: 'course', // alias
-      foreignKey: {
-        fieldName: 'userId',
-        allowNull: false,
-      },
-    });
+    User.Course = User.hasMany(models.Course)
   };
 
   return User;
