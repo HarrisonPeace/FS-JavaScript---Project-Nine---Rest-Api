@@ -36,7 +36,6 @@ Run npm run seed
 Run npm start
 
 For best results when testing this api, download Postman and import the RESTAPI.postman_collection.json file.
-
 It contains a list of available routes and tests.
 
 View finished project at http://localhost:5000
