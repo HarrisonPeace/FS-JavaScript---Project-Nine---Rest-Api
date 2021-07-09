@@ -1,7 +1,5 @@
 let express = require('express');
 let router = express.Router();
-const bcrypt = require('bcrypt');
-const auth = require('basic-auth');
 
 const {authenticateUser, asyncHandler} = require('./helpers');
 const User = require('../models').User;
