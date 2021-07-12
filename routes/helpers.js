@@ -1,6 +1,9 @@
 const bcrypt = require('bcrypt');
 const auth = require('basic-auth');
+let chalk = require('chalk');
+
 const User = require('../models').User;
+
 
 /* Handler function to catch async and sequelize errors */
 function asyncHandler(cb){
@@ -31,7 +34,7 @@ async function authenticateUser(req, res, next) {
       const authenticated = bcrypt.compareSync(credentials.pass, user.password);
 
       if (authenticated) {
-        console.log(`Authentication successful for username: ${credentials.name}`);
+        console.log(chalk.bold.green(`Authentication successful for username: ${credentials.name}`));
         req.currentUser = user.dataValues.id;  // Store the user on the Request object.
 
       } else message = `Authentication failure for username: ${credentials.name}`;
@@ -41,7 +44,7 @@ async function authenticateUser(req, res, next) {
   } else message = 'Auth header not found';
 
   if (message) { // if fail console log 'message' and deny entry
-    console.warn(message);
+    console.warn(chalk.bold.red(message));
     res.status(401).json({ message: 'Access Denied' });
 
   } else next(); // User authenticated and program can continue to next step
